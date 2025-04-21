@@ -13,9 +13,8 @@ window.TrelloPowerUp.initialize({
 
         // 2. Do the sort
         const colorOrder = [
-          'green','yellow','orange','red',
-          'purple','blue','sky','lime',
-          'pink','black'
+          'red','purple','blue','orange','pink',
+          'lime','green','sky','yellow','black'
         ];
         const sortedCards = opts.cards.slice().sort((a, b) => {
           const aCol = (a.cover && a.cover.color) || '';
