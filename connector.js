@@ -3,12 +3,36 @@ window.TrelloPowerUp.initialize({
     return [{
       text: 'Cover Color',
       callback: function(t, opts) {
-        const colorOrder = ['green','yellow','orange','red','purple','blue','sky','lime','pink','black'];
-        const sorted = opts.cards.slice().sort((a,b) => 
-          colorOrder.indexOf((a.cover||{}).color||'') 
-          - colorOrder.indexOf((b.cover||{}).color||'')
-        );
-        return { sortedIds: sorted.map(c => c.id) };
+        // 1. Gather a simple array of {id, name, color} for logging
+        const cardInfos = opts.cards.map(c => ({
+          id:   c.id,
+          name: c.name,
+          color: (c.cover && c.cover.color) || 'none'
+        }));
+        console.log('🟢 Cover Sorter received:', cardInfos);
+
+        // 2. Do the sort
+        const colorOrder = [
+          'green','yellow','orange','red',
+          'purple','blue','sky','lime',
+          'pink','black'
+        ];
+        const sortedCards = opts.cards.slice().sort((a, b) => {
+          const aCol = (a.cover && a.cover.color) || '';
+          const bCol = (b.cover && b.cover.color) || '';
+          return colorOrder.indexOf(aCol) - colorOrder.indexOf(bCol);
+        });
+
+        // 3. Log the result
+        const sortedInfos = sortedCards.map(c => ({
+          id:   c.id,
+          name: c.name,
+          color: (c.cover && c.cover.color) || 'none'
+        }));
+        console.log('🔵 Cover Sorter result:', sortedInfos);
+
+        // 4. Return the new order
+        return { sortedIds: sortedCards.map(c => c.id) };
       }
     }];
   }
