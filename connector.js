@@ -1,5 +1,5 @@
 /** Bump when deploying so console shows whether Trello loaded a fresh connector. */
-const COVER_SORTER_VERSION = '2.1.0';
+const COVER_SORTER_VERSION = '2.1.1';
 
 window.TrelloPowerUp.initialize({
   'list-sorters': function (t) {
@@ -74,6 +74,35 @@ window.TrelloPowerUp.initialize({
           const cards = opts.cards.map(function (c) {
             return pickMergedCard(c, listById.get(c.id), boardById.get(c.id));
           });
+
+          const coverDebugRows = opts.cards.map(function (c, i) {
+            const lc = listById.get(c.id);
+            const bc = boardById.get(c.id);
+            const merged = cards[i];
+            return {
+              id: c.id,
+              name: c.name,
+              optsKeys: Object.keys(c).sort(),
+              optsCover: c.cover,
+              listHit: !!lc,
+              listKeys: lc ? Object.keys(lc).sort() : [],
+              listCover: lc ? lc.cover : undefined,
+              boardHit: !!bc,
+              boardKeys: bc ? Object.keys(bc).sort() : [],
+              boardCover: bc ? bc.cover : undefined,
+              mergedCover: merged.cover,
+              mergedKeys: Object.keys(merged).sort()
+            };
+          });
+          console.log('🐛 Cover debug summary', {
+            version: COVER_SORTER_VERSION,
+            listId: list.id,
+            listName: list.name,
+            listCardCount: (list.cards || []).length,
+            boardCardCount: boardCards.length,
+            optsCardCount: opts.cards.length
+          });
+          console.log('🐛 Cover debug (raw cover per source)', coverDebugRows);
 
           const colorOrder = [
             'red','purple','blue','orange','pink',
