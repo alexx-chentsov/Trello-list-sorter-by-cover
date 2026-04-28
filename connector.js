@@ -3,18 +3,71 @@ window.TrelloPowerUp.initialize({
     return [{
       text: 'Cover + Labels',
       callback: function (t, opts) {
-        return t.cards('id', 'name', 'cover', 'labels').then(function (boardCards) {
-          const byId = new Map(boardCards.map(c => [c.id, c]));
+        const normalizePalette = (v) => {
+          if (v == null || v === '') return '';
+          return String(v).toLowerCase().trim();
+        };
+
+        const hasRenderableCover = (cv) => {
+          return !!(cv && (cv.color || cv.idAttachment || cv.idUploadedBackground || cv.scaled));
+        };
+
+        const pickMergedCard = (optCard, listCard, boardCard) => {
+          const sources = [listCard, boardCard, optCard].filter(Boolean);
+          let cover;
+          for (let i = 0; i < sources.length; i++) {
+            const cv = sources[i].cover;
+            if (cv && normalizePalette(cv.color)) {
+              cover = cv;
+              break;
+            }
+          }
+          if (!cover) {
+            for (let i = 0; i < sources.length; i++) {
+              const cv = sources[i].cover;
+              if (hasRenderableCover(cv)) {
+                cover = cv;
+                break;
+              }
+            }
+          }
+          if (!cover) {
+            for (let i = 0; i < sources.length; i++) {
+              if (sources[i].cover !== undefined && sources[i].cover !== null) {
+                cover = sources[i].cover;
+                break;
+              }
+            }
+          }
+          let labels;
+          for (let i = 0; i < sources.length; i++) {
+            const ls = sources[i].labels;
+            if (Array.isArray(ls) && ls.length) {
+              labels = ls;
+              break;
+            }
+          }
+          return {
+            ...optCard,
+            cover: cover !== undefined ? cover : optCard.cover,
+            labels: labels !== undefined ? labels : (Array.isArray(optCard.labels) ? optCard.labels : [])
+          };
+        };
+
+        return Promise.all([
+          t.list('id', 'name', 'cards').catch(function () {
+            return { cards: [] };
+          }),
+          t.cards('all').catch(function () {
+            return [];
+          })
+        ]).then(function (results) {
+          const list = results[0];
+          const boardCards = results[1];
+          const listById = new Map((list.cards || []).map(c => [c.id, c]));
+          const boardById = new Map(boardCards.map(c => [c.id, c]));
           const cards = opts.cards.map(function (c) {
-            const b = byId.get(c.id);
-            if (!b) return c;
-            return {
-              ...c,
-              cover: b.cover !== undefined ? b.cover : c.cover,
-              labels: (Array.isArray(b.labels) && b.labels.length)
-                ? b.labels
-                : (Array.isArray(c.labels) ? c.labels : [])
-            };
+            return pickMergedCard(c, listById.get(c.id), boardById.get(c.id));
           });
 
           const colorOrder = [
@@ -26,12 +79,7 @@ window.TrelloPowerUp.initialize({
 
           const hasCover = (c) => {
             const cv = c && c.cover;
-            return !!(cv && (cv.color || cv.idAttachment || cv.idUploadedBackground || cv.scaled));
-          };
-
-          const normalizePalette = (v) => {
-            if (v == null || v === '') return '';
-            return String(v).toLowerCase().trim();
+            return hasRenderableCover(cv);
           };
 
           const coverKey = (c) => {
@@ -114,7 +162,7 @@ window.TrelloPowerUp.initialize({
 
           return { sortedIds: sortedCards.map(c => c.id) };
         }).catch(function (err) {
-          console.error('Cover sorter: failed to load board cards for cover data', err);
+          console.error('Cover sorter: failed to load list/board cards for cover data', err);
           return { sortedIds: opts.cards.map(c => c.id) };
         });
       }
