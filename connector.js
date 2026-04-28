@@ -15,8 +15,13 @@ window.TrelloPowerUp.initialize({
           return !!(cv && (cv.color || cv.idAttachment || cv.idUploadedBackground || cv.scaled));
         };
 
+        const normalizePalette = (v) => {
+          if (v == null || v === '') return '';
+          return String(v).toLowerCase().trim();
+        };
+
         const coverKey = (c) => {
-          const col = (c.cover && c.cover.color) || '';
+          const col = normalizePalette(c.cover && c.cover.color);
           if (!col) {
             return { bucket: 0, logCover: hasCover(c) ? 'image' : 'none' };
           }
@@ -35,7 +40,7 @@ window.TrelloPowerUp.initialize({
           const colors = labels.map(l => l && l.color).filter(Boolean);
           const ranks = colors
             .map(col => {
-              const r = colorOrder.indexOf(col);
+              const r = colorOrder.indexOf(normalizePalette(col));
               return r === -1 ? 998 : r;
             });
           const minRank = ranks.length ? Math.min(...ranks) : 998;
@@ -70,7 +75,11 @@ window.TrelloPowerUp.initialize({
         const sortedCards = opts.cards.slice().sort((a, b) => {
           const cka = coverKey(a), ckb = coverKey(b);
           if (cka.bucket !== ckb.bucket) return cka.bucket - ckb.bucket;
-          if (cka.bucket === 1 && cka.colorRank !== ckb.colorRank) return cka.colorRank - ckb.colorRank;
+          if (cka.bucket === 1) {
+            if (cka.colorRank !== ckb.colorRank) return cka.colorRank - ckb.colorRank;
+            const coverCmp = cka.logCover.localeCompare(ckb.logCover);
+            if (coverCmp) return coverCmp;
+          }
 
           const al = labelKey(a), bl = labelKey(b);
           if (cka.bucket === 0 && al.has !== bl.has) return bl.has - al.has;
