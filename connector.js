@@ -16,11 +16,16 @@ window.TrelloPowerUp.initialize({
         };
 
         const coverKey = (c) => {
-          if (!hasCover(c)) return { typeRank: 1, colorRank: 999, color: '' }; // no cover
           const col = (c.cover && c.cover.color) || '';
-          if (!col) return { typeRank: 0, colorRank: -1, color: 'image' };    // image cover
+          if (!col) {
+            return { bucket: 0, logCover: hasCover(c) ? 'image' : 'none' };
+          }
           const r = colorOrder.indexOf(col);
-          return { typeRank: 0, colorRank: r === -1 ? 998 : r, color: col };
+          return {
+            bucket: 1,
+            colorRank: r === -1 ? 998 : r,
+            logCover: col
+          };
         };
 
         const labelKey = (c) => {
@@ -51,30 +56,28 @@ window.TrelloPowerUp.initialize({
           return {
             id: c.id,
             name: c.name,
-            cover: ck.typeRank === 0 ? ck.color : 'none',
+            cover: ck.logCover,
             labels: labels.map(l => `${l.color || 'none'}:${l.name || ''}`).join(', ') || 'none'
           };
         });
         console.log('🟢 Sorter received:', cardInfos);
 
         // 2) Sort:
-        //    - covers first
-        //    - then (no cover) labeled cards
-        //    - then unlabeled
-        //    - within covers: cover color (images first), then label color/name
-        //    - within label group: label color, then label names
+        //    - bucket 0 first: no solid cover.color (no cover or image cover)
+        //    - bucket 1 second: solid palette cover, ordered by colorOrder
+        //    - within bucket 1: palette rank, then label color/name (step 3 skipped)
+        //    - within bucket 0: labeled before unlabeled, then label color/name
         const sortedCards = opts.cards.slice().sort((a, b) => {
-          const ac = coverKey(a), bc = coverKey(b);
-          if (ac.typeRank !== bc.typeRank) return ac.typeRank - bc.typeRank; // cover (0) before none (1)
-          if (ac.typeRank === 0 && ac.colorRank !== bc.colorRank) return ac.colorRank - bc.colorRank;
+          const cka = coverKey(a), ckb = coverKey(b);
+          if (cka.bucket !== ckb.bucket) return cka.bucket - ckb.bucket;
+          if (cka.bucket === 1 && cka.colorRank !== ckb.colorRank) return cka.colorRank - ckb.colorRank;
 
           const al = labelKey(a), bl = labelKey(b);
-          if (ac.typeRank === 1 && al.has !== bl.has) return bl.has - al.has; // labeled before unlabeled (only when no cover)
+          if (cka.bucket === 0 && al.has !== bl.has) return bl.has - al.has;
 
           if (al.colorRank !== bl.colorRank) return al.colorRank - bl.colorRank;
           if (al.nameKey !== bl.nameKey) return al.nameKey.localeCompare(bl.nameKey);
 
-          // final tie-breakers: card name, then original order for stability
           const n = (a.name || '').localeCompare(b.name || '');
           if (n) return n;
           return (origIndex.get(a.id) ?? 0) - (origIndex.get(b.id) ?? 0);
@@ -87,7 +90,7 @@ window.TrelloPowerUp.initialize({
           return {
             id: c.id,
             name: c.name,
-            cover: ck.typeRank === 0 ? ck.color : 'none',
+            cover: ck.logCover,
             labels: labels.map(l => `${l.color || 'none'}:${l.name || ''}`).join(', ') || 'none'
           };
         });
