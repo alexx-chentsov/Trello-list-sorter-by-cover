@@ -1,8 +1,13 @@
+/** Bump when deploying so console shows whether Trello loaded a fresh connector. */
+const COVER_SORTER_VERSION = '2.1.0';
+
 window.TrelloPowerUp.initialize({
   'list-sorters': function (t) {
     return [{
       text: 'Cover + Labels',
       callback: function (t, opts) {
+        console.log('[Cover+Labels sorter]', COVER_SORTER_VERSION);
+
         const normalizePalette = (v) => {
           if (v == null || v === '') return '';
           return String(v).toLowerCase().trim();
